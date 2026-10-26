@@ -1,0 +1,124 @@
+name: CoCoCheck
+description: Check commit messages against the Conventional Commits specification with CoCoCheck.
+author: Martin Nonnenmacher
+
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  from:
+    description: >-
+      Check only the commits after this one (exclusive). Defaults to the base commit of a pull
+      request, or the previous head of the branch for a push. If it is empty or the all-zero SHA of
+      a new branch, all commits up to `to` are checked.
+    default: ${{ github.event.pull_request.base.sha || github.event.before }}
+  to:
+    description: >-
+      The last commit to check (inclusive). Defaults to the head commit of a pull request, or the
+      pushed commit for a push.
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
+  config:
+    description: >-
+      Path to the config file. Defaults to the first of cococheck.yml, cococheck.yaml,
+      .cococheck.yml, or .cococheck.yaml that exists in the repository.
+    default: ''
+  deny-warnings:
+    description: Fail the checks for commits that only violate rules with the severity `warning`.
+    default: 'false'
+  args:
+    description: Additional arguments for the CoCoCheck command line, separated by whitespace.
+    default: ''
+  cococheck-ref:
+    description: The branch, tag, or commit SHA of CoCoCheck to build.
+    default: main
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve the CoCoCheck commit
+      id: resolve
+      shell: bash
+      env:
+        COCOCHECK_URL: https://github.com/coco-tools/cococheck.git
+        COCOCHECK_REF: ${{ inputs.cococheck-ref }}
+      run: |
+        if [[ "$COCOCHECK_REF" =~ ^[0-9a-f]{40}$ ]]; then
+          sha="$COCOCHECK_REF"
+        else
+          # Prefer a peeled annotated tag over the tag object itself.
+          sha=$(git ls-remote "$COCOCHECK_URL" "$COCOCHECK_REF" "$COCOCHECK_REF^{}" \
+            | sort -k2 | tail -n 1 | cut -f 1)
+          if [[ -z "$sha" ]]; then
+            echo "::error::Could not resolve the CoCoCheck ref '$COCOCHECK_REF'."
+            exit 1
+          fi
+        fi
+        echo "Building CoCoCheck from commit $sha."
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        echo "url=$COCOCHECK_URL" >> "$GITHUB_OUTPUT"
+        echo "dir=$RUNNER_TEMP/cococheck" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the CoCoCheck binary
+      id: cache
+      uses: actions/cache@v4.2.3
+      with:
+        path: ${{ steps.resolve.outputs.dir }}/bin
+        key: cococheck-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.sha }}
+
+    - name: Install the Rust toolchain
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build CoCoCheck
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        COCOCHECK_URL: ${{ steps.resolve.outputs.url }}
+        COCOCHECK_SHA: ${{ steps.resolve.outputs.sha }}
+        COCOCHECK_DIR: ${{ steps.resolve.outputs.dir }}
+      run: |
+        git init --quiet "$COCOCHECK_DIR/src"
+        cd "$COCOCHECK_DIR/src"
+        git fetch --quiet --depth 1 "$COCOCHECK_URL" "$COCOCHECK_SHA"
+        git checkout --quiet FETCH_HEAD
+        cargo build --release --locked -p cococheck
+        mkdir -p "$COCOCHECK_DIR/bin"
+        cp target/release/cococheck "$COCOCHECK_DIR/bin/"
+
+    - name: Run CoCoCheck
+      shell: bash
+      env:
+        COCOCHECK: ${{ steps.resolve.outputs.dir }}/bin/cococheck
+        FROM: ${{ inputs.from }}
+        TO: ${{ inputs.to }}
+        CONFIG: ${{ inputs.config }}
+        DENY_WARNINGS: ${{ inputs.deny-warnings }}
+        ARGS: ${{ inputs.args }}
+      run: |
+        if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+          echo "::error::The repository is a shallow clone. Check it out with 'fetch-depth: 0' so that the commits to check can be found."
+          exit 1
+        fi
+
+        args=(--color always)
+        if [[ -n "$TO" ]]; then
+          args+=(--to "$TO")
+        fi
+        if [[ -z "$FROM" || "$FROM" =~ ^0+$ ]]; then
+          echo "::notice::No start commit is known, checking all commits up to '${TO:-HEAD}'."
+        else
+          args+=(--from "$FROM")
+        fi
+        if [[ -n "$CONFIG" ]]; then
+          args+=(--config "$CONFIG")
+        fi
+        if [[ "$DENY_WARNINGS" == "true" ]]; then
+          args+=(--deny-warnings)
+        fi
+        if [[ -n "$ARGS" ]]; then
+          read -r -a extra_args <<< "$ARGS"
+          args+=("${extra_args[@]}")
+        fi
+
+        "$COCOCHECK" "${args[@]}"
