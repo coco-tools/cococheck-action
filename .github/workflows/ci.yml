@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  cococheck:
+    name: CoCoCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          # Fetch the full history, so that the commits to check can be found.
+          fetch-depth: 0
+      # Check the commits of this repository with the action itself.
+      - uses: ./
