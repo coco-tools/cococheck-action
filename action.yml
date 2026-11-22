@@ -160,14 +160,14 @@ runs:
     - name: Restore the CoCoCheck binary
       id: cache
       if: steps.resolve.outputs.mode == 'build'
-      uses: actions/cache@v4.2.3
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
       with:
         path: ${{ steps.resolve.outputs.dir }}/bin
         key: cococheck-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.sha }}
 
     - name: Install the Rust toolchain
       if: steps.resolve.outputs.mode == 'build' && steps.cache.outputs.cache-hit != 'true'
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
 
     - name: Build CoCoCheck
       if: steps.resolve.outputs.mode == 'build' && steps.cache.outputs.cache-hit != 'true'

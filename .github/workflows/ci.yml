@@ -28,7 +28,7 @@ jobs:
           - windows-latest
           - windows-11-arm
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Fetch the full history, so that the commits to check can be found.
           fetch-depth: 0
@@ -39,7 +39,7 @@ jobs:
     name: CoCoCheck (latest release)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./
@@ -50,7 +50,7 @@ jobs:
     name: CoCoCheck (built from source)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - uses: ./

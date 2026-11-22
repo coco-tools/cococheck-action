@@ -18,7 +18,7 @@ jobs:
       pull-requests: write
     steps:
       # Opens or updates the release pull request, and creates the release once it is merged.
-      - uses: googleapis/release-please-action@v5.0.0
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           # Pull requests created with the GITHUB_TOKEN do not trigger the CI workflow. Set the
@@ -26,7 +26,7 @@ jobs:
           # token so that the checks run for the release pull request.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.release.outputs.release_created == 'true'
 
       # Move the major tag, for example v1, to the new release, so that users of the major tag get it.
