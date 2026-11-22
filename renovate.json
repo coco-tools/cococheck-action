@@ -1,0 +1,44 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver",
+    ":semanticCommits",
+    ":semanticCommitScopeDisabled",
+    ":semanticCommitTypeAll(deps)"
+  ],
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "3 days",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the default CoCoCheck version of the action.",
+      "managerFilePatterns": ["/^action\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+default:\\s*(?<currentValue>\\S+)"
+      ],
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the CoCoCheck version in the example of the README.",
+      "managerFilePatterns": ["/^README\\.md$/"],
+      "matchStrings": ["version: (?<currentValue>\\d+\\.\\d+\\.\\d+) # Or `latest`"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "coco-tools/cococheck",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Propose new releases of CoCoCheck immediately, so that the action adopts them as soon as possible.",
+      "matchPackageNames": ["coco-tools/cococheck"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Updates that are only used in CI do not affect the users of the action.",
+      "matchFileNames": [".github/workflows/**"],
+      "semanticCommitType": "ci"
+    }
+  ]
+}
