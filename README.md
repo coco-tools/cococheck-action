@@ -24,7 +24,7 @@ jobs:
         with:
           # Fetch the full history, so that the commits to check can be found.
           fetch-depth: 0
-      - uses: coco-tools/cococheck-action@main
+      - uses: coco-tools/cococheck-action@v1
 ```
 
 For a pull request, the action checks the commits between the base and the head commit of the pull
@@ -58,7 +58,7 @@ CoCoCheck does not suddenly fail your checks. A new version of CoCoCheck is adop
 release of the action. Choose another version with the `version` input:
 
 ```yaml
-      - uses: coco-tools/cococheck-action@main
+      - uses: coco-tools/cococheck-action@v1
         with:
           version: 0.1.0 # Or `latest` for the latest release of CoCoCheck.
 ```
@@ -71,6 +71,13 @@ To build an unreleased version of CoCoCheck, set `cococheck-ref` to a branch, ta
 If `cococheck-ref` is set, it takes precedence and `version` is ignored: CoCoCheck is always built
 from source, even if the ref is the tag of a release. Binaries built from source are cached per
 commit.
+
+## Versioning
+
+The action follows [Semantic Versioning](https://semver.org/). Use the major tag, for example `v1`,
+to get compatible updates automatically, or pin a release or its commit SHA for full control.
+Updates to a version of CoCoCheck with breaking changes, such as stricter rules, are released in a
+new major version of the action.
 
 ## License
 
