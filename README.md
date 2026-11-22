@@ -4,11 +4,6 @@ A GitHub Action that checks commit messages against the
 [Conventional Commits](https://www.conventionalcommits.org/) specification with
 [CoCoCheck](https://github.com/coco-tools/cococheck).
 
-> [!NOTE]
-> CoCoCheck does not publish releases yet, so this action builds CoCoCheck from source, by default
-> from its `main` branch. The binary is cached per CoCoCheck commit, so it is only rebuilt when that
-> commit changes.
-
 ## Usage
 
 ```yaml
@@ -53,7 +48,29 @@ missing.
 | `config`        | Path to the config file.                                                    | `cococheck.yml`, `cococheck.yaml`, `.cococheck.yml`, or `.cococheck.yaml` |
 | `deny-warnings` | Fail the checks for commits that only violate rules with severity `warning`. | `false`                                     |
 | `args`          | Additional command-line arguments for CoCoCheck, separated by whitespace.   |                                             |
-| `cococheck-ref` | The branch, tag, or commit SHA of CoCoCheck to build.                       | `main`                                      |
+| `version`       | The version of CoCoCheck, or `latest` for the latest release.               | A fixed version for each release of the action |
+| `cococheck-ref` | The branch, tag, or commit SHA of CoCoCheck to build from source. If it is set, `version` is ignored. |                                 |
+
+## CoCoCheck version
+
+Each release of the action uses a fixed version of CoCoCheck by default, so that a new release of
+CoCoCheck does not suddenly fail your checks. A new version of CoCoCheck is adopted with a new
+release of the action. Choose another version with the `version` input:
+
+```yaml
+      - uses: coco-tools/cococheck-action@main
+        with:
+          version: 0.1.0 # Or `latest` for the latest release of CoCoCheck.
+```
+
+The action downloads the prebuilt binary of the release and verifies its checksum. Binaries are
+available for Linux, macOS, and Windows on x64 and ARM64. On other platforms, the action builds
+CoCoCheck from source, which installs Rust and takes a few minutes.
+
+To build an unreleased version of CoCoCheck, set `cococheck-ref` to a branch, tag, or commit SHA.
+If `cococheck-ref` is set, it takes precedence and `version` is ignored: CoCoCheck is always built
+from source, even if the ref is the tag of a release. Binaries built from source are cached per
+commit.
 
 ## License
 

@@ -29,54 +29,153 @@ inputs:
   args:
     description: Additional arguments for the CoCoCheck command line, separated by whitespace.
     default: ''
+  version:
+    description: >-
+      The version of CoCoCheck to use, for example `0.1.0`, or `latest` for the latest release. The
+      prebuilt binary of the release is downloaded if there is one for the platform of the runner,
+      otherwise CoCoCheck is built from the tag of the release.
+    default: 0.1.0
   cococheck-ref:
-    description: The branch, tag, or commit SHA of CoCoCheck to build.
-    default: main
+    description: >-
+      The branch, tag, or commit SHA of CoCoCheck to build from source instead of using a release.
+      If it is set, `version` is ignored.
+    default: ''
 
 runs:
   using: composite
   steps:
-    - name: Resolve the CoCoCheck commit
+    - name: Resolve CoCoCheck
       id: resolve
       shell: bash
       env:
-        COCOCHECK_URL: https://github.com/coco-tools/cococheck.git
+        COCOCHECK_REPO: https://github.com/coco-tools/cococheck
+        COCOCHECK_VERSION: ${{ inputs.version }}
         COCOCHECK_REF: ${{ inputs.cococheck-ref }}
       run: |
-        if [[ "$COCOCHECK_REF" =~ ^[0-9a-f]{40}$ ]]; then
-          sha="$COCOCHECK_REF"
+        dir="$RUNNER_TEMP/cococheck"
+        echo "dir=$dir" >> "$GITHUB_OUTPUT"
+        echo "url=$COCOCHECK_REPO.git" >> "$GITHUB_OUTPUT"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "bin=$dir/bin/cococheck.exe" >> "$GITHUB_OUTPUT"
+        else
+          echo "bin=$dir/bin/cococheck" >> "$GITHUB_OUTPUT"
+        fi
+
+        ref="$COCOCHECK_REF"
+        if [[ -z "$ref" ]]; then
+          version="${COCOCHECK_VERSION#v}"
+          if [[ "$version" == "latest" ]]; then
+            # The latest release redirects to the page of its tag.
+            latest=$(curl --fail --silent --show-error --location --output /dev/null \
+              --write-out '%{url_effective}' "$COCOCHECK_REPO/releases/latest")
+            version="${latest##*/v}"
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+].*)?$ ]]; then
+            echo "::error::'$COCOCHECK_VERSION' is not a valid CoCoCheck version."
+            exit 1
+          fi
+
+          # The Windows binary for x64 also runs on ARM64 with the emulation of Windows.
+          case "$RUNNER_OS-$RUNNER_ARCH" in
+            Linux-X64) target=x86_64-unknown-linux-musl ;;
+            Linux-ARM64) target=aarch64-unknown-linux-musl ;;
+            macOS-X64) target=x86_64-apple-darwin ;;
+            macOS-ARM64) target=aarch64-apple-darwin ;;
+            Windows-X64 | Windows-ARM64) target=x86_64-pc-windows-msvc ;;
+            *) target='' ;;
+          esac
+
+          if [[ -n "$target" ]]; then
+            if [[ "$target" == *-windows-* ]]; then
+              archive="cococheck-$target.zip"
+            else
+              archive="cococheck-$target.tar.gz"
+            fi
+            echo "Using the prebuilt binary of CoCoCheck $version for $target."
+            echo "mode=download" >> "$GITHUB_OUTPUT"
+            echo "archive=$archive" >> "$GITHUB_OUTPUT"
+            echo "checksum=cococheck-$target.sha256" >> "$GITHUB_OUTPUT"
+            echo "download-url=$COCOCHECK_REPO/releases/download/v$version" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::notice::There is no prebuilt binary of CoCoCheck for $RUNNER_OS on $RUNNER_ARCH, building CoCoCheck $version from source."
+          ref="v$version"
+        fi
+
+        if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+          sha="$ref"
         else
           # Prefer a peeled annotated tag over the tag object itself.
-          sha=$(git ls-remote "$COCOCHECK_URL" "$COCOCHECK_REF" "$COCOCHECK_REF^{}" \
+          sha=$(git ls-remote "$COCOCHECK_REPO.git" "$ref" "$ref^{}" \
             | sort -k2 | tail -n 1 | cut -f 1)
           if [[ -z "$sha" ]]; then
-            echo "::error::Could not resolve the CoCoCheck ref '$COCOCHECK_REF'."
+            echo "::error::Could not resolve the CoCoCheck ref '$ref'."
             exit 1
           fi
         fi
         echo "Building CoCoCheck from commit $sha."
+        echo "mode=build" >> "$GITHUB_OUTPUT"
         echo "sha=$sha" >> "$GITHUB_OUTPUT"
-        echo "url=$COCOCHECK_URL" >> "$GITHUB_OUTPUT"
-        echo "dir=$RUNNER_TEMP/cococheck" >> "$GITHUB_OUTPUT"
+
+    - name: Download CoCoCheck
+      if: steps.resolve.outputs.mode == 'download'
+      shell: bash
+      env:
+        COCOCHECK_DIR: ${{ steps.resolve.outputs.dir }}
+        DOWNLOAD_URL: ${{ steps.resolve.outputs.download-url }}
+        ARCHIVE: ${{ steps.resolve.outputs.archive }}
+        CHECKSUM: ${{ steps.resolve.outputs.checksum }}
+      run: |
+        mkdir -p "$COCOCHECK_DIR/download" "$COCOCHECK_DIR/bin"
+        cd "$COCOCHECK_DIR/download"
+        for file in "$ARCHIVE" "$CHECKSUM"; do
+          curl --fail --silent --show-error --location --retry 3 --output "$file" "$DOWNLOAD_URL/$file"
+        done
+
+        expected=$(cut -d ' ' -f 1 < "$CHECKSUM")
+        if command -v sha256sum > /dev/null; then
+          actual=$(sha256sum "$ARCHIVE" | cut -d ' ' -f 1)
+        else
+          actual=$(shasum -a 256 "$ARCHIVE" | cut -d ' ' -f 1)
+        fi
+        if [[ "$actual" != "$expected" ]]; then
+          echo "::error::The checksum of $ARCHIVE is $actual, but $expected was expected."
+          exit 1
+        fi
+
+        if [[ "$ARCHIVE" == *.zip ]]; then
+          if command -v unzip > /dev/null; then
+            unzip -q -o "$ARCHIVE"
+          else
+            powershell -NoProfile -Command "Expand-Archive -Force -Path '$ARCHIVE' -DestinationPath ."
+          fi
+          mv cococheck.exe "$COCOCHECK_DIR/bin/"
+        else
+          tar -xzf "$ARCHIVE"
+          mv cococheck "$COCOCHECK_DIR/bin/"
+        fi
 
     - name: Restore the CoCoCheck binary
       id: cache
+      if: steps.resolve.outputs.mode == 'build'
       uses: actions/cache@v4.2.3
       with:
         path: ${{ steps.resolve.outputs.dir }}/bin
         key: cococheck-${{ runner.os }}-${{ runner.arch }}-${{ steps.resolve.outputs.sha }}
 
     - name: Install the Rust toolchain
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.resolve.outputs.mode == 'build' && steps.cache.outputs.cache-hit != 'true'
       uses: dtolnay/rust-toolchain@stable
 
     - name: Build CoCoCheck
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.resolve.outputs.mode == 'build' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         COCOCHECK_URL: ${{ steps.resolve.outputs.url }}
         COCOCHECK_SHA: ${{ steps.resolve.outputs.sha }}
         COCOCHECK_DIR: ${{ steps.resolve.outputs.dir }}
+        COCOCHECK_BIN: ${{ steps.resolve.outputs.bin }}
       run: |
         git init --quiet "$COCOCHECK_DIR/src"
         cd "$COCOCHECK_DIR/src"
@@ -84,12 +183,12 @@ runs:
         git checkout --quiet FETCH_HEAD
         cargo build --release --locked -p cococheck
         mkdir -p "$COCOCHECK_DIR/bin"
-        cp target/release/cococheck "$COCOCHECK_DIR/bin/"
+        cp "target/release/$(basename "$COCOCHECK_BIN")" "$COCOCHECK_DIR/bin/"
 
     - name: Run CoCoCheck
       shell: bash
       env:
-        COCOCHECK: ${{ steps.resolve.outputs.dir }}/bin/cococheck
+        COCOCHECK: ${{ steps.resolve.outputs.bin }}
         FROM: ${{ inputs.from }}
         TO: ${{ inputs.to }}
         CONFIG: ${{ inputs.config }}
