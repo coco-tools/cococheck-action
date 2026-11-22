@@ -1,0 +1,3 @@
+rules:
+  description_case:
+    case: sentence
