@@ -8,6 +8,7 @@
     ":semanticCommitTypeAll(deps)"
   ],
   "labels": ["dependencies"],
+  "commitMessageLowerCase": "never",
   "minimumReleaseAge": "3 days",
   "customManagers": [
     {
