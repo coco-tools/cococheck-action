@@ -5,7 +5,14 @@
     ".": {
       "release-type": "simple",
       "initial-version": "1.0.0",
-      "include-component-in-tag": false
+      "include-component-in-tag": false,
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Bug Fixes" },
+        { "type": "perf", "section": "Performance Improvements" },
+        { "type": "revert", "section": "Reverts" },
+        { "type": "deps", "section": "Dependencies" }
+      ]
     }
   }
 }
