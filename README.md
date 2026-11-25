@@ -1,5 +1,10 @@
 # CoCoCheck Action
 
+[![CI](https://github.com/coco-tools/cococheck-action/actions/workflows/ci.yml/badge.svg)](https://github.com/coco-tools/cococheck-action/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/coco-tools/cococheck-action.svg)](https://github.com/coco-tools/cococheck-action/releases/latest)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A GitHub Action that checks commit messages against the
 [Conventional Commits](https://www.conventionalcommits.org/) specification with
 [CoCoCheck](https://github.com/coco-tools/cococheck).
