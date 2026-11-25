@@ -35,6 +35,19 @@ jobs:
       # Check the commits of this repository with the action itself.
       - uses: ./
 
+  cococheck-missing-from:
+    name: CoCoCheck (start commit missing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      # After a force-push, the previous head of the branch is usually not part of the clone.
+      # Simulate this with a commit that does not exist, so that only `to` is checked.
+      - uses: ./
+        with:
+          from: 1234567890abcdef1234567890abcdef12345678
+
   cococheck-latest:
     name: CoCoCheck (latest release)
     runs-on: ubuntu-latest

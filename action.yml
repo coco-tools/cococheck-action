@@ -11,7 +11,8 @@ inputs:
     description: >-
       Check only the commits after this one (exclusive). Defaults to the base commit of a pull
       request, or the previous head of the branch for a push. If it is empty or the all-zero SHA of
-      a new branch, all commits up to `to` are checked.
+      a new branch, all commits up to `to` are checked. If the commit is not in the repository, for
+      example the previous head of a branch after a force-push, only `to` is checked.
     default: ${{ github.event.pull_request.base.sha || github.event.before }}
   to:
     description: >-
@@ -202,13 +203,23 @@ runs:
         fi
 
         args=(--color always)
-        if [[ -n "$TO" ]]; then
-          args+=(--to "$TO")
-        fi
         if [[ -z "$FROM" || "$FROM" =~ ^0+$ ]]; then
+          # For example, the first push of a new branch.
           echo "::notice::No start commit is known, checking all commits up to '${TO:-HEAD}'."
+          if [[ -n "$TO" ]]; then
+            args+=(--to "$TO")
+          fi
+        elif ! git cat-file -e "$FROM^{commit}" 2> /dev/null; then
+          # For example, the previous head of a branch after a force-push, which is no longer
+          # reachable from any ref and therefore not part of the clone.
+          echo "::notice::The start commit '$FROM' is not in the repository, for example after a force-push, checking only '${TO:-HEAD}'."
+          # A single revision selects only that commit.
+          args+=("${TO:-HEAD}")
         else
           args+=(--from "$FROM")
+          if [[ -n "$TO" ]]; then
+            args+=(--to "$TO")
+          fi
         fi
         if [[ -n "$CONFIG" ]]; then
           args+=(--config "$CONFIG")

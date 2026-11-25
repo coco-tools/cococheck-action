@@ -30,7 +30,9 @@ jobs:
 For a pull request, the action checks the commits between the base and the head commit of the pull
 request. It uses the head commit instead of the merge commit that GitHub checks out. For a push, it
 checks the pushed commits. For the first push of a new branch, there is no previous commit, so all
-commits up to the pushed one are checked.
+commits up to the pushed one are checked. After a force-push, the previous head of the branch is
+usually no longer part of the clone, even with `fetch-depth: 0`, because no ref points to it
+anymore. Then only the pushed commit is checked.
 
 CoCoCheck reads its configuration from the first of `cococheck.yml`, `cococheck.yaml`,
 `.cococheck.yml`, or `.cococheck.yaml` that exists in the root of the repository. See the
@@ -43,7 +45,7 @@ missing.
 
 | Input           | Description                                                                 | Default                                     |
 |-----------------|-----------------------------------------------------------------------------|---------------------------------------------|
-| `from`          | Check only the commits after this one. It is not checked itself.            | Base commit of the pull request, or the previous head of the pushed branch |
+| `from`          | Check only the commits after this one. It is not checked itself. If it is not in the repository, only `to` is checked. | Base commit of the pull request, or the previous head of the pushed branch |
 | `to`            | The last commit to check. It is checked itself.                             | Head commit of the pull request, or the pushed commit |
 | `config`        | Path to the config file.                                                    | `cococheck.yml`, `cococheck.yaml`, `.cococheck.yml`, or `.cococheck.yaml` |
 | `deny-warnings` | Fail the checks for commits that only violate rules with severity `warning`. | `false`                                     |
