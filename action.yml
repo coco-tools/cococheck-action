@@ -36,7 +36,7 @@ inputs:
       prebuilt binary of the release is downloaded if there is one for the platform of the runner,
       otherwise CoCoCheck is built from the tag of the release.
     # renovate: datasource=github-releases depName=coco-tools/cococheck
-    default: 0.1.0
+    default: 0.2.0
   cococheck-ref:
     description: >-
       The branch, tag, or commit SHA of CoCoCheck to build from source instead of using a release.
