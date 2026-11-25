@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.1](https://github.com/coco-tools/cococheck-action/compare/v1.0.0...v1.0.1) (2026-11-25)
+
+
+### Bug Fixes
+
+* Check only the pushed commit if the start commit is missing ([41ee4ea](https://github.com/coco-tools/cococheck-action/commit/41ee4ea3dd8fdbe6ae4de4db07b228625f5b1722))
+
+
+### Dependencies
+
+* Update actions/cache action to v6 ([2388b42](https://github.com/coco-tools/cococheck-action/commit/2388b425c8e00b7286ddfbf288f58e2b23ff76a0))
+* Update dependency coco-tools/cococheck to v0.2.0 ([177809c](https://github.com/coco-tools/cococheck-action/commit/177809cecae541aea193fd7c6d3cef495cbe29ab))
+
 ## 1.0.0 (2026-11-22)
 
 
