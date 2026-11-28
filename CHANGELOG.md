@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/coco-tools/cococheck-action/compare/v1.0.1...v1.0.2) (2026-11-28)
+
+
+### Dependencies
+
+* Update dependency coco-tools/cococheck to v0.2.1 ([ceb5b26](https://github.com/coco-tools/cococheck-action/commit/ceb5b267ad37dfe124e0b1d63d9fdd9748be50ec))
+
 ## [1.0.1](https://github.com/coco-tools/cococheck-action/compare/v1.0.0...v1.0.1) (2026-11-25)
 
 
