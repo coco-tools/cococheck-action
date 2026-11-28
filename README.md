@@ -67,7 +67,7 @@ release of the action. Choose another version with the `version` input:
 ```yaml
       - uses: coco-tools/cococheck-action@v1
         with:
-          version: 0.2.0 # Or `latest` for the latest release of CoCoCheck.
+          version: 0.2.1 # Or `latest` for the latest release of CoCoCheck.
 ```
 
 The action downloads the prebuilt binary of the release and verifies its checksum. Binaries are
